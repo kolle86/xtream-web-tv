@@ -3,7 +3,8 @@ const sqlite3 = require("sqlite3").verbose();
 const db = new sqlite3.Database("./data/xtream.db");
 require("dotenv").config();
 
-const apiUrl = process.env.XTREAMAPIURL;
+// Remove trailing slash from API URL to prevent double slashes
+const apiUrl = process.env.XTREAMAPIURL?.replace(/\/+$/, "") || "";
 const username = process.env.XTREAMUSER;
 const password = process.env.XTREAMPASSWORD;
 
