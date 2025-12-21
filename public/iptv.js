@@ -330,5 +330,28 @@ function newToast(message) {
   toast.show();
 }
 
+// Webpage fullscreen mode (like ArtPlayer)
+function toggleWebpageFullscreen() {
+  document.body.classList.toggle("webpage-fullscreen");
+  const isFullscreen = document.body.classList.contains("webpage-fullscreen");
+  
+  // Update button icon
+  const btn = document.getElementById("webpageFullscreenBtn");
+  if (btn) {
+    const icon = btn.querySelector("i");
+    if (icon) {
+      icon.className = isFullscreen ? "bi bi-fullscreen-exit" : "bi bi-arrows-fullscreen";
+    }
+    btn.title = isFullscreen ? "Exit webpage fullscreen" : "Webpage fullscreen";
+  }
+}
+
+// Exit webpage fullscreen on Escape key
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && document.body.classList.contains("webpage-fullscreen")) {
+    toggleWebpageFullscreen();
+  }
+});
+
 // Initialize application on DOMContentLoaded
 window.addEventListener("DOMContentLoaded", initApp);

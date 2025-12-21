@@ -68,7 +68,12 @@
                 </div>
             </div>
             <div id="player" class="col-md-7">
-                <div class="text-center">
+                <div class="text-center player-wrapper">
+                    <div class="player-controls">
+                        <button id="webpageFullscreenBtn" class="btn btn-dark btn-sm" onclick="toggleWebpageFullscreen()" title="Webpage fullscreen">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
                     <video id="videoPlayer" poster="" width="100%" controls></video>
                 </div>
             </div>

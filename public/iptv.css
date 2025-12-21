@@ -86,3 +86,59 @@ video::-webkit-media-controls-timeline {
 video::-webkit-media-controls-progress-bar {
     display: none;
 }
+
+/* Webpage Fullscreen Mode */
+body.webpage-fullscreen {
+    overflow: hidden;
+}
+
+body.webpage-fullscreen #categories,
+body.webpage-fullscreen #epg,
+body.webpage-fullscreen header,
+body.webpage-fullscreen .navbar {
+    display: none !important;
+}
+
+body.webpage-fullscreen #player {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    z-index: 9999;
+    background: #000;
+    margin: 0;
+    padding: 0;
+}
+
+body.webpage-fullscreen #videoPlayer {
+    width: 100%;
+    height: 100vh;
+    object-fit: contain;
+    border-radius: 0;
+}
+
+body.webpage-fullscreen .player-controls {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 10000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+body.webpage-fullscreen #player:hover .player-controls {
+    opacity: 1;
+}
+
+.player-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 10;
+}
+
+.player-wrapper {
+    position: relative;
+}
