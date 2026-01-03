@@ -135,33 +135,47 @@ const getStreams = async () => {
     );
     const categories = categoriesResponse.data;
 
-    for (const category of categories) {
-      console.log("Inserting " + category.category_name + "...");
+    // Start transaction for better performance
+    await new Promise((resolve, reject) => {
+      db.run("BEGIN TRANSACTION", (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
 
-      try {
-        await new Promise((resolve, reject) => {
-          db.run(
-            "INSERT INTO categories (category_id, name) VALUES (?, ?)",
-            [category.category_id, category.category_name],
-            function (err) {
-              if (err) {
-                console.log(err.message);
-                return reject(err);
+    try {
+      // Prepare statements outside the loop for better performance
+      const categoryStmt = db.prepare(
+        "INSERT INTO categories (category_id, name) VALUES (?, ?)"
+      );
+      const channelStmt = db.prepare(
+        "INSERT INTO channels (stream_id, name, icon, num, category_id) VALUES (?, ?, ?, ?, ?)"
+      );
+
+      for (const category of categories) {
+        console.log("Inserting " + category.category_name + "...");
+
+        try {
+          await new Promise((resolve, reject) => {
+            categoryStmt.run(
+              [category.category_id, category.category_name],
+              function (err) {
+                if (err) {
+                  console.log(err.message);
+                  return reject(err);
+                }
+                resolve();
               }
-              resolve();
-            }
-          );
-        });
+            );
+          });
 
-        const streams = await getStreamsByCategory(category.category_id);
+          const streams = await getStreamsByCategory(category.category_id);
 
-        // Only process if we have streams
-        if (streams && streams.length > 0) {
-          await Promise.all(
-            streams.map((stream) => {
-              return new Promise((resolve, reject) => {
-                db.run(
-                  "INSERT INTO channels (stream_id, name, icon, num, category_id) VALUES (?, ?, ?, ?, ?)",
+          // Only process if we have streams
+          if (streams && streams.length > 0) {
+            for (const stream of streams) {
+              await new Promise((resolve, reject) => {
+                channelStmt.run(
                   [
                     stream.stream_id,
                     stream.name,
@@ -178,21 +192,49 @@ const getStreams = async () => {
                   }
                 );
               });
-            })
+            }
+          } else {
+            console.warn(
+              `No streams found for category ${category.category_name}`
+            );
+          }
+        } catch (categoryError) {
+          console.error(
+            `Failed to process category ${category.category_name}:`,
+            categoryError.message
           );
-        } else {
-          console.warn(
-            `No streams found for category ${category.category_name}`
-          );
+          // Continue with next category instead of failing completely
+          continue;
         }
-      } catch (categoryError) {
-        console.error(
-          `Failed to process category ${category.category_name}:`,
-          categoryError.message
-        );
-        // Continue with next category instead of failing completely
-        continue;
       }
+
+      // Finalize prepared statements
+      await new Promise((resolve, reject) => {
+        categoryStmt.finalize((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+      await new Promise((resolve, reject) => {
+        channelStmt.finalize((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+
+      // Commit transaction
+      await new Promise((resolve, reject) => {
+        db.run("COMMIT", (err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+    } catch (error) {
+      // Rollback on error
+      await new Promise((resolve) => {
+        db.run("ROLLBACK", () => resolve());
+      });
+      throw error;
     }
     return categories;
   } catch (error) {
