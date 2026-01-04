@@ -308,7 +308,7 @@ function updateChannelsManually() {
                 <span class='visually-hidden'>Loading...</span>
               </div>
               Updating bouquets in the background.
-              <br>Page will reload when update is finished.`);
+              <br>Page will reload when update is finished.`, -1);
 
   fetch("/update")
     .then((response) => response.json())
@@ -318,10 +318,10 @@ function updateChannelsManually() {
         location.reload();
       } else {
         console.error("Error updating database: ", data.error);
-        newToast("Error updating database.");
+        newToast("Error updating database.", 3000);
       }
     })
-    .catch((error) => newToast(`Error updating database: ${error}`));
+    .catch((error) => newToast(`Error updating database: ${error}`, 3000));
 }
 
 // Toggle favourite
@@ -410,21 +410,24 @@ function toggleFavourite(event, streamId) {
         }
         
         // Show feedback
-        newToast(data.isFavourite ? "Added to favourites" : "Removed from favourites");
+        newToast(data.isFavourite ? "Added to favourites" : "Removed from favourites", 3000);
       } else {
-        newToast("Error updating favourite");
+        newToast("Error updating favourite", 3000);
       }
     })
     .catch((error) => {
       console.error("Error toggling favourite:", error);
-      newToast("Error updating favourite");
+      newToast("Error updating favourite", 3000);
     });
 }
 
 // Toast notification
-function newToast(message) {
+function newToast(message, timeout = 3000) {
   elements.toastMessage.innerHTML = message;
   toast.show();
+  if(timeout > 0) {
+    setTimeout(() => toast.hide(), timeout);
+  };
 }
 
 // Webpage fullscreen mode (like ArtPlayer)
