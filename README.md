@@ -50,43 +50,6 @@ docker compose up -d
 ```
 The application now runs on http://localhost:4000
 
-### Build image manually from repository
-
-1. Clone the repository
-```
-git clone https://github.com/kolle86/xtream-web-tv.git
-```
-
-2. Navigate into the project directory
-```
-cd xtream-web-tv
-```
-
-3. Create .env file
-```
-touch .env
-```
-
-4. Insert these lines into the env-file. For explanation see chapter "Configuration"
-```
-XTREAMAPIURL=http://provider.net:8080
-XTREAMUSER=username
-XTREAMPASSWORD=password
-CRON_UPDATE=15 */12 * * *
-```
-
-5. Build docker image
-```
-docker build -t xtream-web-tv .
-```
-
-6. Start container
-```
-docker compose up -d
-```
-
-The application now runs on http://localhost:4000
-
 ## ⚙️ Configuration
 | Env-Variable    | Explanation                                      | Required | Default         |
 |-----------------|--------------------------------------------------|----------|----------------|
