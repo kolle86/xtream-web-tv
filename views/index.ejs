@@ -33,6 +33,47 @@
                     </button>
                 </div>
                 <div class="overflow-y-scroll overflow-x-hidden " id="accordion_overflow">
+                    <!-- Favourites Section - Always First -->
+                    <div class="accordion me-1" id="favourites">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#collapsefavourites" aria-expanded="true"
+                                    aria-controls="collapsefavourites">
+                                    <i class="bi bi-star-fill text-warning me-2"></i> Favourites
+                                </button>
+                            </h2>
+                            <div id="collapsefavourites" class="accordion-collapse collapse"
+                                data-bs-parent="#accordionExample">
+                                <div class="accordion-body">
+                                    <ul class="list-group list-group-flush">
+                                        <% if (favouriteChannels.length === 0) { %>
+                                            <li class="list-group-item text-muted">No favourites yet. Click the star icon on a channel to add it here.</li>
+                                        <% } %>
+                                        <% favouriteChannels.forEach(function(channel) { %>
+                                            <button class="list-group-item list-group-item-action channel-item py-0 px-0"
+                                                channel-name="<%= channel.name %>"
+                                                data-stream-id="<%= channel.stream_id %>"
+                                                data-url="<%= apiUrl %>/live/<%= username %>/<%= password %>/<%= channel.stream_id %>.m3u8"
+                                                epg-url="<%= apiUrl %>/player_api.php?username=<%= username %>&password=<%= password %>&action=get_short_epg&stream_id=<%= channel.stream_id %>">
+                                                <% if (channel.icon) { %>
+                                                    <img loading="lazy" class="picon" src="<%= channel.icon %>" onerror="this.src='tv_picon.svg'; this.classList.add('picon-error');">
+                                                <% } else { %>
+                                                    <img class="picon picon-error" src="tv_picon.svg">
+                                                <% } %>
+                                                <span class="channel-name"><%= channel.name %></span>
+                                                <i class="bi bi-star-fill favourite-star is-favourite" 
+                                                   data-stream-id="<%= channel.stream_id %>" 
+                                                   onclick="toggleFavourite(event, <%= channel.stream_id %>)" 
+                                                   title="Remove from favourites"></i>
+                                            </button>
+                                        <% }) %>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <% streams.forEach(function(category) { %>
                         <% if (!category.hidden ){ %>
 
@@ -50,8 +91,10 @@
                                         <div class="accordion-body">
                                             <ul class="list-group list-group-flush">
                                                 <% category.streams.forEach(function(channel) { %>
+                                                    <% const isFav = favourites.includes(channel.stream_id); %>
                                                     <button class="list-group-item list-group-item-action channel-item py-0 px-0"
                                                         channel-name="<%= channel.name %>"
+                                                        data-stream-id="<%= channel.stream_id %>"
                                                         data-url="<%= apiUrl %>/live/<%= username %>/<%= password %>/<%= channel.stream_id %>.m3u8"
                                                         epg-url="<%= apiUrl %>/player_api.php?username=<%= username %>&password=<%= password %>&action=get_short_epg&stream_id=<%= channel.stream_id %>">
                                                         <% if (channel.icon) { %>
@@ -59,7 +102,11 @@
                                                         <% } else { %>
                                                             <img class="picon picon-error" src="tv_picon.svg">
                                                         <% } %>
-                                                        <%= channel.name %>
+                                                        <span class="channel-name"><%= channel.name %></span>
+                                                        <i class="bi <%= isFav ? 'bi-star-fill is-favourite' : 'bi-star' %> favourite-star" 
+                                                           data-stream-id="<%= channel.stream_id %>" 
+                                                           onclick="toggleFavourite(event, <%= channel.stream_id %>)" 
+                                                           title="<%= isFav ? 'Remove from favourites' : 'Add to favourites' %>"></i>
                                                     </button>
                                                 <% }) %>
                                             </ul>

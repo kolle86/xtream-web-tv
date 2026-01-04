@@ -324,6 +324,103 @@ function updateChannelsManually() {
     .catch((error) => newToast(`Error updating database: ${error}`));
 }
 
+// Toggle favourite
+function toggleFavourite(event, streamId) {
+  event.stopPropagation(); // Prevent channel click
+  
+  const starElement = event.target;
+  const isFavourite = starElement.classList.contains("is-favourite");
+  const channelItem = starElement.closest(".channel-item");
+  
+  fetch("/favourite/toggle", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ streamId, isFavourite }),
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.success) {
+        // Update all star icons for this stream (may appear in favourites and category)
+        document.querySelectorAll(`.favourite-star[data-stream-id="${streamId}"]`).forEach((star) => {
+          if (data.isFavourite) {
+            star.classList.remove("bi-star");
+            star.classList.add("bi-star-fill", "is-favourite");
+            star.title = "Remove from favourites";
+          } else {
+            star.classList.remove("bi-star-fill", "is-favourite");
+            star.classList.add("bi-star");
+            star.title = "Add to favourites";
+          }
+        });
+        
+        const favouritesBody = document.querySelector("#collapsefavourites .accordion-body ul");
+        
+        if (data.isFavourite) {
+          // Add channel to favourites section
+          const newFavItem = channelItem.cloneNode(true);
+          // Update star to be filled
+          const newStar = newFavItem.querySelector(".favourite-star");
+          newStar.classList.remove("bi-star");
+          newStar.classList.add("bi-star-fill", "is-favourite");
+          newStar.title = "Remove from favourites";
+          
+          // Remove the "No favourites yet" message if present
+          const emptyMessage = favouritesBody.querySelector("li.text-muted");
+          if (emptyMessage) {
+            emptyMessage.remove();
+          }
+          
+          // Add click listener for the new item
+          newFavItem.addEventListener("click", () => handleChannelClick(newFavItem));
+          
+          // Insert in alphabetical order
+          const newChannelName = newFavItem.getAttribute("channel-name").toLowerCase();
+          const existingItems = Array.from(favouritesBody.querySelectorAll(".channel-item"));
+          let inserted = false;
+          
+          for (const item of existingItems) {
+            const itemName = item.getAttribute("channel-name").toLowerCase();
+            if (newChannelName < itemName) {
+              favouritesBody.insertBefore(newFavItem, item);
+              inserted = true;
+              break;
+            }
+          }
+          
+          // If not inserted yet, add to the end
+          if (!inserted) {
+            favouritesBody.appendChild(newFavItem);
+          }
+        } else {
+          // Remove channel from favourites section
+          const favItem = favouritesBody.querySelector(`.channel-item[data-stream-id="${streamId}"]`);
+          if (favItem) {
+            favItem.remove();
+          }
+          
+          // If no more favourites, show the empty message
+          if (favouritesBody.querySelectorAll(".channel-item").length === 0) {
+            const emptyLi = document.createElement("li");
+            emptyLi.className = "list-group-item text-muted";
+            emptyLi.textContent = "No favourites yet. Click the star icon on a channel to add it here.";
+            favouritesBody.appendChild(emptyLi);
+          }
+        }
+        
+        // Show feedback
+        newToast(data.isFavourite ? "Added to favourites" : "Removed from favourites");
+      } else {
+        newToast("Error updating favourite");
+      }
+    })
+    .catch((error) => {
+      console.error("Error toggling favourite:", error);
+      newToast("Error updating favourite");
+    });
+}
+
 // Toast notification
 function newToast(message) {
   elements.toastMessage.innerHTML = message;

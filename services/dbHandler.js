@@ -31,6 +31,13 @@ db.serialize(() => {
         hidden INTEGER,
         FOREIGN KEY (category_id) REFERENCES categories(category_id) 
     )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS favourites (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        stream_id INTEGER UNIQUE,
+        added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (stream_id) REFERENCES channels(stream_id)
+    )`);
   checkAndUpdateTables();
 });
 
@@ -51,6 +58,28 @@ function checkAndUpdateTables() {
 }
 
 /**
+ * Cleans up favourites by removing entries for streams that no longer exist.
+ * @returns {Promise<void>} A promise that resolves when cleanup is complete.
+ */
+function cleanupFavourites() {
+  return new Promise((resolve, reject) => {
+    console.log("Cleaning up dead favourites...");
+    db.run(
+      `DELETE FROM favourites WHERE stream_id NOT IN (SELECT stream_id FROM channels)`,
+      function (err) {
+        if (err) {
+          console.error("Error cleaning up favourites:", err.message);
+          reject(err);
+          return;
+        }
+        console.log(`Removed ${this.changes} dead favourites.`);
+        resolve();
+      }
+    );
+  });
+}
+
+/**
  * Updates the database tables by clearing existing data and fetching new streams.
  * @returns {Promise<void>} A promise that resolves when the tables are updated.
  */
@@ -67,7 +96,10 @@ function updateTables() {
           return;
         }
         console.log("Truncated tables...");
-        getStreams().then(resolve).catch(reject); // Warte auf getStreams()
+        getStreams()
+          .then(() => cleanupFavourites())
+          .then(resolve)
+          .catch(reject);
       });
     });
   });
@@ -317,6 +349,89 @@ async function updateCategoriesVisibility(bouquetsHidden) {
   });
 }
 
+/**
+ * Adds a channel to favourites.
+ * @param {number} streamId - The stream ID to add to favourites.
+ * @returns {Promise<void>} A promise that resolves when the favourite is added.
+ */
+function addFavourite(streamId) {
+  return new Promise((resolve, reject) => {
+    db.run(
+      "INSERT OR IGNORE INTO favourites (stream_id) VALUES (?)",
+      [streamId],
+      function (err) {
+        if (err) {
+          console.error("Error adding favourite:", err.message);
+          reject(err);
+          return;
+        }
+        resolve({ added: this.changes > 0 });
+      }
+    );
+  });
+}
+
+/**
+ * Removes a channel from favourites.
+ * @param {number} streamId - The stream ID to remove from favourites.
+ * @returns {Promise<void>} A promise that resolves when the favourite is removed.
+ */
+function removeFavourite(streamId) {
+  return new Promise((resolve, reject) => {
+    db.run(
+      "DELETE FROM favourites WHERE stream_id = ?",
+      [streamId],
+      function (err) {
+        if (err) {
+          console.error("Error removing favourite:", err.message);
+          reject(err);
+          return;
+        }
+        resolve({ removed: this.changes > 0 });
+      }
+    );
+  });
+}
+
+/**
+ * Gets all favourite stream IDs.
+ * @returns {Promise<Array>} A promise that resolves to an array of favourite stream IDs.
+ */
+function getFavourites() {
+  return new Promise((resolve, reject) => {
+    db.all("SELECT stream_id FROM favourites", (err, rows) => {
+      if (err) {
+        console.error("Error getting favourites:", err.message);
+        reject(err);
+        return;
+      }
+      resolve(rows.map((row) => row.stream_id));
+    });
+  });
+}
+
+/**
+ * Gets all favourite channels with full details.
+ * @returns {Promise<Array>} A promise that resolves to an array of favourite channels.
+ */
+function getFavouriteChannels() {
+  return new Promise((resolve, reject) => {
+    db.all(
+      `SELECT channels.* FROM channels 
+       INNER JOIN favourites ON channels.stream_id = favourites.stream_id
+       ORDER BY channels.name COLLATE NOCASE ASC`,
+      (err, rows) => {
+        if (err) {
+          console.error("Error getting favourite channels:", err.message);
+          reject(err);
+          return;
+        }
+        resolve(rows);
+      }
+    );
+  });
+}
+
 module.exports = {
   getAccount,
   getStreams,
@@ -324,4 +439,8 @@ module.exports = {
   getCategoriesWithStreams,
   updateTables,
   updateCategoriesVisibility,
+  addFavourite,
+  removeFavourite,
+  getFavourites,
+  getFavouriteChannels,
 };

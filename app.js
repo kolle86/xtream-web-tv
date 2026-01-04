@@ -121,6 +121,8 @@ app.get("/", async (req, res) => {
         isUpToDate,
       };
       const streams = await dbHandler.getCategoriesWithStreams();
+      const favourites = await dbHandler.getFavourites();
+      const favouriteChannels = await dbHandler.getFavouriteChannels();
       res.render("index", {
         streams,
         apiUrl,
@@ -128,6 +130,8 @@ app.get("/", async (req, res) => {
         password,
         account,
         version,
+        favourites,
+        favouriteChannels,
       });
     } catch (error) {
       console.error("Error retrieving data:", error);
@@ -164,6 +168,27 @@ app.post("/bouquets", async (req, res) => {
     res.redirect("/");
   } catch (error) {
     res.send(error);
+  }
+});
+
+/**
+ * Toggles a channel as favourite.
+ * @route POST /favourite/toggle
+ * @body {number} streamId - The stream ID to toggle as favourite.
+ * @returns {Object} JSON response indicating success or failure.
+ */
+app.post("/favourite/toggle", async (req, res) => {
+  const { streamId, isFavourite } = req.body;
+  try {
+    if (isFavourite) {
+      await dbHandler.removeFavourite(streamId);
+      res.json({ success: true, isFavourite: false });
+    } else {
+      await dbHandler.addFavourite(streamId);
+      res.json({ success: true, isFavourite: true });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 

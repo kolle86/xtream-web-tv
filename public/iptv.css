@@ -144,3 +144,39 @@ body.webpage-fullscreen #player:hover .player-controls {
 .player-wrapper {
     position: relative;
 }
+
+/* Favourite Star */
+.favourite-star {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 1rem;
+    color: #6c757d;
+    transition: color 0.2s ease, transform 0.2s ease;
+    z-index: 5;
+}
+
+.favourite-star:hover {
+    transform: translateY(-50%) scale(1.2);
+    color: #ffc107;
+}
+
+.favourite-star.is-favourite {
+    color: #ffc107;
+}
+
+.channel-item {
+    position: relative;
+    padding-right: 35px !important;
+}
+
+.channel-name {
+    display: inline-block;
+    max-width: calc(100% - 45px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+}
