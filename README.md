@@ -20,12 +20,12 @@ Web application built with Node.js and Bootstrap for streaming live channels fro
 
 ### Docker compose
 
-1. Create docker-compose.yml
-```shsh
-touch docker-compose.yml
+1. Clone this repository
+```
+git clone https://github.com/kolle86/xtream-web-tv.git
 ```
 
-2. Insert into docker-compose.yml:
+2. Adjust the docker-compose.yml to your needs and put your provider details:
 ```
 services:
   xtream-web-tv:
@@ -45,7 +45,7 @@ services:
 For an explanation of the environment variables see chapter "Configuration".
 
 3. Start container
-```sh
+```
 docker compose up -d
 ```
 The application now runs on http://localhost:4000
@@ -53,17 +53,17 @@ The application now runs on http://localhost:4000
 ### Build image manually from repository
 
 1. Clone the repository
-```sh
+```
 git clone https://github.com/kolle86/xtream-web-tv.git
 ```
 
 2. Navigate into the project directory
-```sh
+```
 cd xtream-web-tv
 ```
 
 3. Create .env file
-```shsh
+```
 touch .env
 ```
 
@@ -76,12 +76,12 @@ CRON_UPDATE=15 */12 * * *
 ```
 
 5. Build docker image
-```sh
+```
 docker build -t xtream-web-tv .
 ```
 
 6. Start container
-```sh
+```
 docker compose up -d
 ```
 
