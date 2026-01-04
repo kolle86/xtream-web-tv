@@ -54,7 +54,11 @@
                                                         channel-name="<%= channel.name %>"
                                                         data-url="<%= apiUrl %>/live/<%= username %>/<%= password %>/<%= channel.stream_id %>.m3u8"
                                                         epg-url="<%= apiUrl %>/player_api.php?username=<%= username %>&password=<%= password %>&action=get_short_epg&stream_id=<%= channel.stream_id %>">
-                                                        <img loading="lazy" class="picon" src="<%= channel.icon %>">
+                                                        <% if (channel.icon) { %>
+                                                            <img loading="lazy" class="picon" src="<%= channel.icon %>" onerror="this.src='tv_picon.svg'; this.classList.add('picon-error');">
+                                                        <% } else { %>
+                                                            <img class="picon picon-error" src="tv_picon.svg">
+                                                        <% } %>
                                                         <%= channel.name %>
                                                     </button>
                                                 <% }) %>
