@@ -11,6 +11,7 @@ const dbHandler = require("./services/dbHandler"); // Import des neuen Moduls
 require("dotenv").config();
 // Remove trailing slash from API URL to prevent double slashes
 const apiUrl = process.env.XTREAMAPIURL?.replace(/\/+$/, "") || "";
+const authEnabled = process.env.AUTH_ENABLED !== "false";
 const username = process.env.XTREAMUSER;
 const password = process.env.XTREAMPASSWORD;
 let cron_update = "15 */12 * * *";
@@ -103,7 +104,7 @@ async function getLatestGitHubVersion() {
  * @route GET /
  */
 app.get("/", async (req, res) => {
-  const isLoggedIn = req.session.isLoggedIn;
+  const isLoggedIn = !authEnabled || req.session.isLoggedIn;
   if (isLoggedIn) {
     try {
       const account = await dbHandler.getAccount();
@@ -148,6 +149,9 @@ app.get("/", async (req, res) => {
  * @route POST /login
  */
 app.post("/login", async (req, res) => {
+  if (!authEnabled) {
+    return res.redirect("/");
+  }
   if (req.body.password == password && req.body.username == username) {
     req.session.isLoggedIn = true;
     res.redirect("/");
@@ -197,6 +201,9 @@ app.post("/favourite/toggle", async (req, res) => {
  * @route GET /logout
  */
 app.get("/logout", (req, res) => {
+  if (!authEnabled) {
+    return res.redirect("/");
+  }
   req.session.destroy((err) => {
     if (err) {
       console.log(err);

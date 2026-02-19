@@ -57,6 +57,7 @@ The application now runs on http://localhost:4000
 | XTREAMUSER      | Your Xtream Codes username                       | Required |                |
 | XTREAMPASSWORD  | Your Xtream Codes password                       | Required |                |
 | CRON_UPDATE     | Update frequency for the channel database in cron format | Optional | 15 */12 * * * |
+| AUTH_ENABLED    | Enable/disable login process and session requirement | Optional | true |
 
 ## 🛠️ Technologie Stack
 | Category     | Framework |
