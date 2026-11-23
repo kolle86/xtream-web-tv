@@ -25,7 +25,14 @@ Web application built with Node.js and Bootstrap for streaming live channels fro
 git clone https://github.com/kolle86/xtream-web-tv.git
 ```
 
-2. Adjust the docker-compose.yml to your needs and put your provider details:
+2. Create a `.env` file next to the docker-compose.yml and put your provider details:
+```
+XTREAMAPIURL=http://provider.net:8080
+XTREAMUSER=username
+XTREAMPASSWORD=password
+CRON_UPDATE="15 */12 * * *"
+```
+The `.env` file is gitignored and loaded by the container via `env_file` in the docker-compose.yml:
 ```
 services:
   xtream-web-tv:
@@ -33,15 +40,12 @@ services:
     image: xtream-web-tv
     container_name: xtream-web-tv
     restart: unless-stopped
-    environment:
-      - XTREAMAPIURL=http://provider.net:8080
-      - XTREAMUSER=username
-      - XTREAMPASSWORD=password
-      - CRON_UPDATE="15 */12 * * *"
+    env_file:
+      - .env
     ports:
       - "4000:4000"
     volumes:
-      - xtream-web-tv:/app/data
+      - ~/xtream-web-tv:/app/data
 ```
 For an explanation of the environment variables see chapter "Configuration".
 

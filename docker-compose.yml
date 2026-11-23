@@ -4,11 +4,8 @@ services:
     image: xtream-web-tv
     container_name: xtream-web-tv
     restart: unless-stopped
-    environment:
-      - XTREAMAPIURL=http://provider.net:8080
-      - XTREAMUSER=username
-      - XTREAMPASSWORD=password
-      - CRON_UPDATE="15 */12 * * *"
+    env_file:
+      - .env
     ports:
       - "4000:4000"
     volumes:
