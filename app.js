@@ -14,6 +14,13 @@ const apiUrl = process.env.XTREAMAPIURL?.replace(/\/+$/, "") || "";
 const authEnabled = process.env.AUTH_ENABLED !== "false";
 const username = process.env.XTREAMUSER;
 const password = process.env.XTREAMPASSWORD;
+const providerHost = (() => {
+  try {
+    return new URL(apiUrl).host;
+  } catch {
+    return "";
+  }
+})();
 let cron_update = "15 */12 * * *";
 if (process.env.CRON_UPDATE != undefined) {
   cron_update = "15 */12 * * *";
@@ -51,6 +58,197 @@ app.use(
     cookie: { maxAge: 7 * 24 * 60 * 60 * 1000 },
   })
 );
+
+/**
+ * Checks whether the current request is allowed to access protected resources.
+ * @param {import("express").Request} req
+ * @returns {boolean}
+ */
+function isLoggedIn(req) {
+  return !authEnabled || Boolean(req.session.isLoggedIn);
+}
+
+/**
+ * Hosts the proxy may fetch from. Starts with the configured provider and grows
+ * with hosts the provider redirects to (e.g. its CDN), so segments served by a
+ * different host than the playlist still work without opening an open relay.
+ * @type {Set<string>}
+ */
+const trustedStreamHosts = new Set(providerHost ? [providerHost] : []);
+
+/**
+ * Ensures a URL points to the Xtream provider or one of its redirect targets to
+ * prevent the proxy from being abused as an open relay (SSRF).
+ * @param {string} urlString
+ * @returns {boolean}
+ */
+function isAllowedStreamUrl(urlString) {
+  if (typeof urlString !== "string" || urlString.length === 0) {
+    return false;
+  }
+  try {
+    const target = new URL(urlString);
+    return (
+      (target.protocol === "http:" || target.protocol === "https:") &&
+      trustedStreamHosts.has(target.host)
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Remembers the host of a URL the provider redirected to, so subsequent
+ * requests for its segments are accepted.
+ * @param {string} urlString
+ */
+function trustStreamHost(urlString) {
+  try {
+    trustedStreamHosts.add(new URL(urlString).host);
+  } catch {
+    // ignore unparsable URLs
+  }
+}
+
+/**
+ * Checks if an upstream response is an HLS playlist that needs URL rewriting.
+ * @param {string} urlString
+ * @param {string|undefined} contentType
+ * @returns {boolean}
+ */
+function isPlaylistResponse(urlString, contentType) {
+  if ((contentType || "").toLowerCase().includes("mpegurl")) {
+    return true;
+  }
+  try {
+    const pathname = new URL(urlString).pathname.toLowerCase();
+    return pathname.endsWith(".m3u8") || pathname.endsWith(".m3u");
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Builds a same-origin proxy URL for an upstream resource.
+ * @param {string} resourceUrl Absolute or relative upstream URL
+ * @param {string} baseUrl URL of the playlist containing the resource
+ * @returns {string}
+ */
+function toProxyUrl(resourceUrl, baseUrl) {
+  const absoluteUrl = new URL(resourceUrl, baseUrl).toString();
+  return `/proxy/hls?url=${encodeURIComponent(absoluteUrl)}`;
+}
+
+/**
+ * Rewrites all URIs of an HLS playlist so they are loaded through this server.
+ * @param {string} playlist
+ * @param {string} baseUrl
+ * @returns {string}
+ */
+function rewritePlaylist(playlist, baseUrl) {
+  return playlist
+    .split(/\r?\n/)
+    .map((line) => {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        return line;
+      }
+      if (trimmed.startsWith("#")) {
+        return line.replace(/URI="([^"]+)"/g, (match, uri) => `URI="${toProxyUrl(uri, baseUrl)}"`);
+      }
+      return toProxyUrl(trimmed, baseUrl);
+    })
+    .join("\n");
+}
+
+/**
+ * Reads an upstream stream completely into a buffer.
+ * @param {NodeJS.ReadableStream} stream
+ * @returns {Promise<Buffer>}
+ */
+async function readStream(stream) {
+  const chunks = [];
+  for await (const chunk of stream) {
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks);
+}
+
+/**
+ * Proxies HLS playlists and segments of the Xtream provider.
+ * Playlists are rewritten so every referenced resource stays on this server.
+ * @route GET /proxy/hls?url=<encoded upstream url>
+ */
+app.get("/proxy/hls", async (req, res) => {
+  if (!isLoggedIn(req)) {
+    return res.status(401).send("Unauthorized");
+  }
+  const targetUrl = req.query.url;
+  if (!isAllowedStreamUrl(targetUrl)) {
+    return res.status(400).send("Invalid stream URL");
+  }
+
+  let upstream;
+  try {
+    upstream = await axios.get(targetUrl, {
+      responseType: "stream",
+      timeout: 20000,
+      maxRedirects: 5,
+      validateStatus: () => true,
+      headers: {
+        "User-Agent": req.headers["user-agent"] || "xtream-web-tv",
+        ...(req.headers.range ? { Range: req.headers.range } : {}),
+      },
+    });
+  } catch (error) {
+    console.error("Stream proxy error:", error.message);
+    return res.status(502).send("Error fetching stream");
+  }
+
+  // Provider redirects usually point at a CDN host that serves the segments
+  const finalUrl = upstream.request?.res?.responseUrl || targetUrl;
+  trustStreamHost(finalUrl);
+
+  if (upstream.status < 200 || upstream.status >= 400) {
+    upstream.data.destroy();
+    console.error(`Stream proxy: upstream returned ${upstream.status} for ${finalUrl}`);
+    return res.status(upstream.status).send(`Upstream returned ${upstream.status}`);
+  }
+
+  req.on("close", () => upstream.data.destroy());
+
+  if (isPlaylistResponse(finalUrl, upstream.headers["content-type"])) {
+    try {
+      const body = await readStream(upstream.data);
+      res.set("Cache-Control", "no-cache");
+      res.type("application/vnd.apple.mpegurl").send(rewritePlaylist(body.toString("utf8"), finalUrl));
+    } catch (error) {
+      console.error("Error proxying playlist:", error.message);
+      if (!res.headersSent) {
+        res.status(502).send("Error fetching stream");
+      }
+    }
+    return;
+  }
+
+  res.status(upstream.status);
+  if (upstream.headers["content-type"]) {
+    res.set("Content-Type", upstream.headers["content-type"]);
+  }
+  if (upstream.headers["content-range"]) {
+    res.set("Content-Range", upstream.headers["content-range"]);
+  }
+  if (upstream.headers["accept-ranges"]) {
+    res.set("Accept-Ranges", upstream.headers["accept-ranges"]);
+  }
+  // The body is decompressed by axios, so the encoded length no longer applies.
+  if (!upstream.headers["content-encoding"] && upstream.headers["content-length"]) {
+    res.set("Content-Length", upstream.headers["content-length"]);
+  }
+
+  upstream.data.on("error", () => res.destroy());
+  upstream.data.pipe(res);
+});
 
 // Cron-Job für Updates
 /**

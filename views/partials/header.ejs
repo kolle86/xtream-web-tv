@@ -36,6 +36,12 @@
                             <label class="form-check-label" for="piconsCheck">Show Picons</label>
                         </span>
                     </li>
+                    <li>
+                        <span class="dropdown-item no-close" title="Load streams through this server to avoid mixed content errors on HTTPS">
+                            <input type="checkbox" class="form-check-input" id="proxyStreamsCheck" onchange="toggleStreamProxy();">
+                            <label class="form-check-label" for="proxyStreamsCheck">Proxy streams</label>
+                        </span>
+                    </li>
                     <li><hr class="dropdown-divider"></li>
                     <li><h5 title="Expires <%= account.user_info.expires %>" class="dropdown-header bi bi-person"> <%= account.user_info.username %></h5></li>
                     <li><a class="dropdown-item bi bi-box-arrow-left" href="/logout" type="button"> Logout</a></li>

@@ -10,6 +10,7 @@ Web application built with Node.js and Bootstrap for streaming live channels fro
 - **Customization Options** - Users can customize their experience by:  
   - Selecting which bouquets to display  
   - Enabling or disabling Picons  
+  - Proxying streams through the app server (see [Stream proxy](#-stream-proxy))  
 - **Electronic Program Guide (EPG)** - An integrated electronic program guide (EPG) is available, allowing users to see upcoming programs and schedules.  
 - **Player Features** - The project uses **hls.js** as the player, which supports **Picture-in-Picture (PiP)** mode for an enhanced viewing experience.  
 - **Note** - Due to browser codec limitations and potential HTTP/HTTPS conflicts, some streams may not be playable.
@@ -58,6 +59,17 @@ The application now runs on http://localhost:4000
 | XTREAMPASSWORD  | Your Xtream Codes password                       | Required |                |
 | CRON_UPDATE     | Update frequency for the channel database in cron format | Optional | 15 */12 * * * |
 | AUTH_ENABLED    | Enable/disable login process and session requirement | Optional | true |
+
+## 🔀 Stream proxy
+Browsers block `http://` streams when the app is served over HTTPS (mixed content), and hls.js cannot play them.
+The settings menu offers a **Proxy streams** toggle that loads all playlists and segments through the app server
+(`/proxy/hls`) instead of directly from the provider.
+
+- The setting is stored per browser in `localStorage`
+- Playlists are rewritten server-side, so variant playlists, segments and encryption keys are proxied as well
+- Only URLs of the configured `XTREAMAPIURL` host are proxied, plus the hosts that host redirects to (many providers serve playlists from the panel but segments from a CDN); other hosts are rejected
+- When auth is enabled (`AUTH_ENABLED`), the proxy requires a logged-in session
+- Disable the toggle to stream directly from the provider again (lower server bandwidth usage)
 
 ## 🛠️ Technologie Stack
 | Category     | Framework |

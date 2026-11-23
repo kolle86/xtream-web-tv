@@ -9,7 +9,14 @@ const elements = {
   toastMessage: document.getElementById("toastMessage"),
   updateMenuItem: document.getElementById("updateMenuItem"),
   piconsCheck: document.getElementById("piconsCheck"),
+  proxyStreamsCheck: document.getElementById("proxyStreamsCheck"),
   liveToast: document.getElementById("liveToast"),
+};
+
+// Settings persisted in localStorage
+const settingsKeys = {
+  showPicons: "showPicons",
+  proxyStreams: "proxyStreams",
 };
 
 // Configuration
@@ -27,6 +34,8 @@ const bouquetsModal = new bootstrap.Modal(
 
 // State management
 let updateEPGTimeout;
+let currentVideoUrl = null;
+let currentHls = null;
 
 // Initialize application
 function initApp() {
@@ -66,17 +75,53 @@ function handleChannelClick(channelItem) {
   fetchEPGData(epgUrl);
 
   // Play video
+  currentVideoUrl = videoUrl;
   playVideo(videoUrl);
+}
+
+// Stream proxy setting
+function isStreamProxyEnabled() {
+  return localStorage.getItem(settingsKeys.proxyStreams) === "1";
+}
+
+// Route stream requests through this server when the proxy is enabled
+function getPlaybackUrl(videoUrl) {
+  if (!isStreamProxyEnabled()) return videoUrl;
+  return `/proxy/hls?url=${encodeURIComponent(videoUrl)}`;
 }
 
 // Play video with HLS
 function playVideo(videoUrl) {
   const video = elements.videoPlayer;
-  const hls = new Hls();
 
-  hls.loadSource(videoUrl);
+  if (currentHls) {
+    currentHls.destroy();
+  }
+
+  const hls = new Hls();
+  currentHls = hls;
+
+  hls.loadSource(getPlaybackUrl(videoUrl));
   hls.attachMedia(video);
   hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
+}
+
+// Stream proxy toggle
+function toggleStreamProxy() {
+  const enabled = elements.proxyStreamsCheck.checked;
+  localStorage.setItem(settingsKeys.proxyStreams, enabled ? "1" : "0");
+
+  // Restart the current channel so the new setting takes effect immediately
+  if (currentVideoUrl) {
+    playVideo(currentVideoUrl);
+  }
+
+  newToast(
+    enabled
+      ? "Streams are now proxied through this server."
+      : "Streams are now loaded directly from the provider.",
+    3000
+  );
 }
 
 // Search channels functionality
@@ -150,7 +195,7 @@ function togglePicons() {
   });
 
   const showPicons = elements.piconsCheck.checked ? "1" : "0";
-  localStorage.setItem("showPicons", showPicons);
+  localStorage.setItem(settingsKeys.showPicons, showPicons);
 }
 
 // Sidebar layout toggle
@@ -217,11 +262,13 @@ function loadClassesFromStorage() {
 
 // Load picons settings from storage
 function loadSettingsFromStorage() {
-  const showPicons = localStorage.getItem("showPicons");
+  const showPicons = localStorage.getItem(settingsKeys.showPicons);
   if (showPicons === "0") {
     togglePicons();
     elements.piconsCheck.checked = false;
   }
+
+  elements.proxyStreamsCheck.checked = isStreamProxyEnabled();
 }
 
 // Utility functions
