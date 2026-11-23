@@ -40,13 +40,6 @@
                     <li><h5 title="Expires <%= account.user_info.expires %>" class="dropdown-header bi bi-person"> <%= account.user_info.username %></h5></li>
                     <li><a class="dropdown-item bi bi-box-arrow-left" href="/logout" type="button"> Logout</a></li>
                     <li><hr class="dropdown-divider"></li>
-                    <li><h5 class="dropdown-header">
-                        v<%= version.appVersion %>
-                        <% if (!version.isUpToDate ){ %>
-                            <span class="badge text-bg-warning">Update available</span>
-                        <%}%>
-                    </h5>
-                    </li>
                     <li><a class="dropdown-item bi bi-github" target="_blank" href="https://github.com/kolle86/xtream-web-tv" type="button"> GitHub Repo</a></li>
 
                 </ul>

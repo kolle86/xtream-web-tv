@@ -2,9 +2,7 @@ const express = require("express");
 const app = express();
 const port = 4000;
 const path = require("path");
-const axios = require("axios");
 const cron = require("node-cron");
-const packageJson = require("./package.json");
 const cors = require("cors");
 var bodyParser = require("body-parser");
 const dbHandler = require("./services/dbHandler"); // Import des neuen Moduls
@@ -81,22 +79,6 @@ app.get("/update", async (req, res) => {
   }
 });
 
-/**
- * Fetches the latest version of the application from GitHub releases.
- * @returns {string|null} The latest version tag or null if an error occurs.
- */
-async function getLatestGitHubVersion() {
-  try {
-    const response = await axios.get(
-      `https://api.github.com/repos/kolle86/xtream-web-tv/releases/latest`
-    );
-    return response.data.tag_name.replace(/^v/, "");
-  } catch (error) {
-    console.error("Fehler beim Abrufen der GitHub-Version:", error.message);
-    return null;
-  }
-}
-
 // Startseite mit Account- und Stream-Informationen
 /**
  * Renders the homepage with account and stream information if the user is logged in.
@@ -115,12 +97,6 @@ app.get("/", async (req, res) => {
         year: "numeric",
       });
 
-      const isUpToDate =
-        packageJson.version === (await getLatestGitHubVersion());
-      const version = {
-        appVersion: packageJson.version,
-        isUpToDate,
-      };
       const streams = await dbHandler.getCategoriesWithStreams();
       const favourites = await dbHandler.getFavourites();
       const favouriteChannels = await dbHandler.getFavouriteChannels();
@@ -130,7 +106,6 @@ app.get("/", async (req, res) => {
         username,
         password,
         account,
-        version,
         favourites,
         favouriteChannels,
       });
