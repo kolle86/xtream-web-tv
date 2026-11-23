@@ -76,12 +76,6 @@ header img {
     cursor: pointer;
 }
 
-.dropdown-item.no-close,
-.dropdown-item.no-close label,
-.dropdown-item.no-close .form-check-input {
-    cursor: pointer;
-}
-
 #categories,
 #player {
     transition: all 0.2s ease-in-out;
