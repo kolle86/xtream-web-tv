@@ -41,7 +41,6 @@ let currentHls = null;
 function initApp() {
   loadClassesFromStorage();
   loadSettingsFromStorage();
-  applyPiconProxy();
   setupEventListeners();
   elements.searchInput.focus();
 }
@@ -107,33 +106,10 @@ function playVideo(videoUrl) {
   hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
 }
 
-// Route picons through this server when proxying is enabled, or when http
-// icons would be blocked on an https page (mixed content)
-function getPiconUrl(iconUrl) {
-  if (!/^https?:\/\//i.test(iconUrl)) return null;
-
-  const mixedContent = window.location.protocol === "https:" && iconUrl.toLowerCase().startsWith("http:");
-  if (!isStreamProxyEnabled() && !mixedContent) return null;
-
-  return `/proxy/image?url=${encodeURIComponent(iconUrl)}`;
-}
-
-function applyPiconProxy(root = document) {
-  root.querySelectorAll(".picon[data-icon-src]").forEach((picon) => {
-    const nextSrc = getPiconUrl(picon.dataset.iconSrc) || picon.dataset.iconSrc;
-    if (picon.getAttribute("src") === nextSrc) return;
-
-    picon.classList.remove("picon-error");
-    picon.src = nextSrc;
-  });
-}
-
 // Stream proxy toggle
 function toggleStreamProxy() {
   const enabled = elements.proxyStreamsCheck.checked;
   localStorage.setItem(settingsKeys.proxyStreams, enabled ? "1" : "0");
-
-  applyPiconProxy();
 
   // Restart the current channel so the new setting takes effect immediately
   if (currentVideoUrl) {
@@ -142,8 +118,8 @@ function toggleStreamProxy() {
 
   newToast(
     enabled
-      ? "Streams and picons are now proxied through this server."
-      : "Streams and picons are now loaded directly from the provider.",
+      ? "Streams are now proxied through this server."
+      : "Streams are now loaded directly from the provider.",
     3000
   );
 }
@@ -464,8 +440,6 @@ function toggleFavourite(event, streamId) {
           if (!inserted) {
             favouritesBody.appendChild(newFavItem);
           }
-
-          applyPiconProxy(newFavItem);
         } else {
           // Remove channel from favourites section
           const favItem = favouritesBody.querySelector(`.channel-item[data-stream-id="${streamId}"]`);
