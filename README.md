@@ -29,7 +29,8 @@ git clone https://github.com/kolle86/xtream-web-tv.git
 ```
 services:
   xtream-web-tv:
-    image: kolstr/xtream-web-tv
+    build: .
+    image: xtream-web-tv
     container_name: xtream-web-tv
     restart: unless-stopped
     environment:
@@ -44,9 +45,9 @@ services:
 ```
 For an explanation of the environment variables see chapter "Configuration".
 
-3. Start container
+3. Build the image and start the container
 ```
-docker compose up -d
+docker compose up -d --build
 ```
 The application now runs on http://localhost:4000
 

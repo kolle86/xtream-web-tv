@@ -1,6 +1,7 @@
 services:
   xtream-web-tv:
-    image: kolstr/xtream-web-tv
+    build: .
+    image: xtream-web-tv
     container_name: xtream-web-tv
     restart: unless-stopped
     environment:
