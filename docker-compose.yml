@@ -9,4 +9,4 @@ services:
     ports:
       - "4000:4000"
     volumes:
-      - ~/xtream-web-tv_data:/app/data:Z
+      - ~/xtream-web-tv_data:/app/data
